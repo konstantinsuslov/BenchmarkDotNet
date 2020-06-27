@@ -7,8 +7,11 @@ using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Code;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.ConsoleArguments;
+using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Extensions;
 using BenchmarkDotNet.Filters;
+using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Parameters;
 using BenchmarkDotNet.Reports;
 
@@ -16,7 +19,7 @@ namespace BenchmarkDotNet.Running
 {
     public static partial class BenchmarkConverter
     {
-        public static BenchmarkRunInfo TypeToBenchmarks(Type type, IConfig config = null)
+        public static BenchmarkRunInfo TypeToBenchmarks(Type type, IConfig config = null, string[] args = null)
         {
             if (type.IsGenericTypeDefinition)
                 throw new ArgumentException($"{type.Name} is generic type definition, use BenchmarkSwitcher for it"); // for "open generic types" should be used BenchmarkSwitcher
@@ -24,14 +27,19 @@ namespace BenchmarkDotNet.Running
             // We should check all methods including private to notify users about private methods with the [Benchmark] attribute
             var bindingFlags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-            var fullConfig = GetFullConfig(type, config);
+            var fullConfig = GetFullConfig(type, config, args);
+            if (fullConfig == null)
+                return null;
+
             var allMethods = type.GetMethods(bindingFlags);
             return MethodsToBenchmarksWithFullConfig(type, allMethods, fullConfig);
         }
 
-        public static BenchmarkRunInfo MethodsToBenchmarks(Type containingType, MethodInfo[] benchmarkMethods, IConfig config = null)
+        public static BenchmarkRunInfo MethodsToBenchmarks(Type containingType, MethodInfo[] benchmarkMethods, IConfig config = null, string[] args = null)
         {
-            var fullConfig = GetFullConfig(containingType, config);
+            var fullConfig = GetFullConfig(containingType, config, args);
+            if (fullConfig == null)
+                return null;
 
             return MethodsToBenchmarksWithFullConfig(containingType, benchmarkMethods, fullConfig);
         }
@@ -81,9 +89,27 @@ namespace BenchmarkDotNet.Running
             return new BenchmarkRunInfo(orderedBenchmarks, containingType, immutableConfig);
         }
 
-        public static ImmutableConfig GetFullConfig(Type type, IConfig config)
+        public static ImmutableConfig GetFullConfig(Type type, IConfig config, string[] args)
         {
-            config = config ?? DefaultConfig.Instance;
+            var notNullArgs = args ?? Array.Empty<string>();
+            var notNullConfig = config ?? DefaultConfig.Instance;
+
+            var logger = notNullConfig.GetNonNullCompositeLogger();
+            var (isParsingSuccess, parsedConfig, options) = ConfigParser.Parse(notNullArgs, logger, notNullConfig);
+            if (!isParsingSuccess) // invalid console args, the ConfigParser printed the error
+                return null;
+
+            if (args == null && Environment.GetCommandLineArgs().Length > 1) // The first element is the executable file name
+                logger.WriteLineHint("You haven't passed command line arguments to BenchmarkRunner.Run method. Running with default configuration.");
+
+            if (options.PrintInformation)
+            {
+                logger.WriteLine(HostEnvironmentInfo.GetInformation());
+                return null;
+            }
+
+            var effectiveConfig = ManualConfig.Union(notNullConfig, parsedConfig);
+
             if (type != null)
             {
                 var typeAttributes = type.GetTypeInfo().GetCustomAttributes(true).OfType<IConfigSource>();
@@ -93,10 +119,10 @@ namespace BenchmarkDotNet.Running
                     .OrderBy(c => c.GetJobs().Count(job => job.Meta.IsMutator)); // configs with mutators must be the ones applied at the end
 
                 foreach (var configFromAttribute in configs)
-                    config = ManualConfig.Union(config, configFromAttribute);
+                    effectiveConfig = ManualConfig.Union(effectiveConfig, configFromAttribute);
             }
 
-            return ImmutableConfigBuilder.Create(config);
+            return ImmutableConfigBuilder.Create(effectiveConfig);
         }
 
         private static IEnumerable<Descriptor> GetTargets(

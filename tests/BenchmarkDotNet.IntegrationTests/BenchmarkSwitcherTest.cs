@@ -60,7 +60,7 @@ namespace BenchmarkDotNet.IntegrationTests
             var config = ManualConfig.CreateEmpty().AddLogger(logger);
 
             var summaries = BenchmarkSwitcher
-                .FromTypes(new[] { typeof(ClassC) })
+                .FromTypes(new[] { typeof(ClassWithoutBenchmarks) })
                 .Run(new[] { "--filter", "*" }, config);
 
             Assert.Empty(summaries);
@@ -89,7 +89,7 @@ namespace BenchmarkDotNet.IntegrationTests
 
             const string filter = "WRONG";
             var summaries = BenchmarkSwitcher
-                .FromTypes(new[] { typeof(ClassA), typeof(ClassB) })
+                .FromTypes(new[] { typeof(ClassWithTwoBenchmarks), typeof(ClassWithFourBenchmarks) })
                 .Run(new[] { "--filter", filter }, config);
 
             Assert.Empty(summaries);
@@ -103,7 +103,7 @@ namespace BenchmarkDotNet.IntegrationTests
             var config = ManualConfig.CreateEmpty().AddLogger(logger);
 
             var summaries = BenchmarkSwitcher
-                .FromTypes(new[] { typeof(ClassA) })
+                .FromTypes(new[] { typeof(ClassWithTwoBenchmarks) })
                 .Run(new[] { "--list", "flat" }, config);
 
             Assert.Empty(summaries);
@@ -118,7 +118,7 @@ namespace BenchmarkDotNet.IntegrationTests
             var config = ManualConfig.CreateEmpty().AddLogger(logger);
 
             var summaries = BenchmarkSwitcher
-                .FromTypes(new[] { typeof(ClassA) })
+                .FromTypes(new[] { typeof(ClassWithTwoBenchmarks) })
                 .Run(new[] { "--list", "flat", "--filter", "*.Method1" }, config);
 
             Assert.Empty(summaries);
@@ -137,7 +137,7 @@ namespace BenchmarkDotNet.IntegrationTests
             try
             {
                 var summaries = BenchmarkSwitcher
-                    .FromTypes(new[] { typeof(ClassA) })
+                    .FromTypes(new[] { typeof(ClassWithTwoBenchmarks) })
                     .RunAll(config);
 
                 var summary = summaries.Single();
@@ -163,7 +163,7 @@ namespace BenchmarkDotNet.IntegrationTests
             try
             {
                 var summaries = BenchmarkSwitcher
-                    .FromTypes(new[] { typeof(ClassA) })
+                    .FromTypes(new[] { typeof(ClassWithTwoBenchmarks) })
                     .RunAll(config);
 
                 var summary = summaries.Single();
@@ -238,7 +238,7 @@ namespace BenchmarkDotNet.IntegrationTests
 
             // Don't cover every combination, just pick a complex scenario and check
             // it works end-to-end, i.e. "method=Method1" and "class=ClassB"
-            var types = new[] { typeof(ClassA), typeof(ClassB), typeof(NOTIntegrationTests.ClassD) };
+            var types = new[] { typeof(ClassWithTwoBenchmarks), typeof(ClassWithFourBenchmarks), typeof(NOTIntegrationTests.ClassD) };
             var switcher = new BenchmarkSwitcher(types);
 
             // BenchmarkSwitcher only picks up config values via the args passed in, not via class annotations (e.g "[DryConfig]")
@@ -253,7 +253,7 @@ namespace BenchmarkDotNet.IntegrationTests
         [Fact]
         public void WhenJobIsDefinedInTheConfigAndArgumentsDontContainJobArgumentOnlySingleJobIsUsed()
         {
-            var types = new[] { typeof(ClassB) };
+            var types = new[] { typeof(ClassWithFourBenchmarks) };
             var switcher = new BenchmarkSwitcher(types);
             MockExporter mockExporter = new MockExporter();
             var configWithJobDefined = ManualConfig.CreateEmpty().AddExporter(mockExporter).AddJob(Job.Dry);
@@ -357,7 +357,7 @@ namespace BenchmarkDotNet.IntegrationTests
 
 namespace BenchmarkDotNet.IntegrationTests
 {
-    public class ClassA
+    public class ClassWithTwoBenchmarks
     {
         [Benchmark]
         public void Method1() { }
@@ -365,7 +365,7 @@ namespace BenchmarkDotNet.IntegrationTests
         public void Method2() { }
     }
 
-    public class ClassB
+    public class ClassWithFourBenchmarks
     {
         [Benchmark]
         public void Method1() { }
@@ -377,7 +377,7 @@ namespace BenchmarkDotNet.IntegrationTests
         public void Method4() { }
     }
 
-    public class ClassC
+    public class ClassWithoutBenchmarks
     {
         // None of these methods are actually Benchmarks!!
         public void Method1() { }

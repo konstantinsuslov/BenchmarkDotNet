@@ -13,7 +13,7 @@ namespace BenchmarkDotNet.Running
 {
     public static partial class BenchmarkConverter
     {
-        public static BenchmarkRunInfo[] UrlToBenchmarks(string url, IConfig config = null)
+        public static BenchmarkRunInfo[] UrlToBenchmarks(string url, IConfig config = null, string[] args = null)
         {
             var logger = HostEnvironmentInfo.FallbackLogger;
 
@@ -44,10 +44,10 @@ namespace BenchmarkDotNet.Running
                 logger.WriteLineError("BuildException: " + e.Message);
                 return Array.Empty<BenchmarkRunInfo>();
             }
-            return SourceToBenchmarks(benchmarkContent, config);
+            return SourceToBenchmarks(benchmarkContent, config, args);
         }
 
-        public static BenchmarkRunInfo[] SourceToBenchmarks(string source, IConfig config = null)
+        public static BenchmarkRunInfo[] SourceToBenchmarks(string source, IConfig config = null, string[] args = null)
         {
             string benchmarkContent = source;
             CompilerResults compilerResults;
@@ -86,7 +86,10 @@ namespace BenchmarkDotNet.Running
             var resultBenchmarks = new List<BenchmarkRunInfo>();
             foreach (var type in types)
             {
-                var runInfo = TypeToBenchmarks(type, config);
+                var runInfo = TypeToBenchmarks(type, config, args);
+                if (runInfo == null)
+                    continue;
+
                 var benchmarks = runInfo.BenchmarksCases.Select(b =>
                 {
                     var target = b.Descriptor;
@@ -98,8 +101,8 @@ namespace BenchmarkDotNet.Running
                         b.Parameters,
                         b.Config);
                 });
-                resultBenchmarks.Add(
-                    new BenchmarkRunInfo(benchmarks.ToArray(), runInfo.Type, runInfo.Config));
+
+                resultBenchmarks.Add(new BenchmarkRunInfo(benchmarks.ToArray(), runInfo.Type, runInfo.Config));
             }
 
             return resultBenchmarks.ToArray();

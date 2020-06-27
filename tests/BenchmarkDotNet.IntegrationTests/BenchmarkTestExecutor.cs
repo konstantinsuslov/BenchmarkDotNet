@@ -32,10 +32,11 @@ namespace BenchmarkDotNet.IntegrationTests
         /// <typeparam name="TBenchmark">type that defines Benchmarks</typeparam>
         /// <param name="config">Optional custom config to be used instead of the default</param>
         /// <param name="fullValidation">Optional: disable validation (default = true/enabled)</param>
+        /// <param name="args">Optional: command line arguments</param>
         /// <returns>The summary from the benchmark run</returns>
-        public Reports.Summary CanExecute<TBenchmark>(IConfig config = null, bool fullValidation = true)
+        public Reports.Summary CanExecute<TBenchmark>(IConfig config = null, bool fullValidation = false, string[] args = null)
         {
-            return CanExecute(typeof(TBenchmark), config, fullValidation);
+            return CanExecute(typeof(TBenchmark), config, fullValidation, args);
         }
 
         /// <summary>
@@ -46,8 +47,9 @@ namespace BenchmarkDotNet.IntegrationTests
         /// <param name="type">type that defines Benchmarks</param>
         /// <param name="config">Optional custom config to be used instead of the default</param>
         /// <param name="fullValidation">Optional: disable validation (default = true/enabled)</param>
+        /// <param name="args">Optional: command line arguments</param>
         /// <returns>The summary from the benchmark run</returns>
-        protected Reports.Summary CanExecute(Type type, IConfig config = null, bool fullValidation = true)
+        protected Reports.Summary CanExecute(Type type, IConfig config = null, bool fullValidation = true, string[] args = null)
         {
             // Add logging, so the Benchmark execution is in the TestRunner output (makes Debugging easier)
             if (config == null)
@@ -60,7 +62,7 @@ namespace BenchmarkDotNet.IntegrationTests
                 config = config.AddColumnProvider(DefaultColumnProviders.Instance);
 
             // Make sure we ALWAYS combine the Config (default or passed in) with any Config applied to the Type/Class
-            var summary = BenchmarkRunner.Run(type, BenchmarkConverter.GetFullConfig(type, config));
+            var summary = BenchmarkRunner.Run(type, BenchmarkConverter.GetFullConfig(type, config, args));
 
             if (fullValidation)
             {

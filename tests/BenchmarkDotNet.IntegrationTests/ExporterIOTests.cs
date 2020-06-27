@@ -101,7 +101,7 @@ namespace BenchmarkDotNet.IntegrationTests
             string resultsDirectoryPath = Path.GetTempPath();
             var exporter = new MockExporter();
             var joinConfig = ManualConfig.CreateEmpty().WithOptions(ConfigOptions.JoinSummary);
-            var mockSummary = GetMockSummary(resultsDirectoryPath, joinConfig, typeof(ClassA), typeof(ClassB));
+            var mockSummary = GetMockSummary(resultsDirectoryPath, joinConfig, typeof(ClassWithTwoBenchmarks), typeof(ClassWithFourBenchmarks));
             var expectedFilePath = $"{Path.Combine(mockSummary.ResultsDirectoryPath, mockSummary.Title)}-report.txt";
             string actualFilePath = null;
 
